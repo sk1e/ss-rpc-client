@@ -195,7 +195,7 @@ return result of procedure"
   (let ((conn (ss:rpc-server-connection server)))
     (condition-case err
         (progn
-          (ss:send-list! proc (list 'call name args))
+          (ss:send-list! conn (list 'call name args))
           (ss:handle-r-re-c-cv conn (ss:read conn)))
     (error (ss:send-client-error! conn err)
            (ss:push-failed-call conn err name args))
