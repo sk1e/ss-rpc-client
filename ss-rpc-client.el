@@ -153,6 +153,10 @@
                         :host 'local))
 
 
+(defun ss:start-server-from-port (name port)
+  (make-ss:rpc-server :name name :connection (ss:connect name port)))
+
+
 (defun ss:start-server (name command)
   "start server process named NAME running the shell command COMMAND"
   (ss--log-info "{%s} initializing server..." name)
