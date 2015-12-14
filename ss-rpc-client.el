@@ -19,7 +19,7 @@
 
 
 (defvar ss:read-timeout 6
-  "time (in seconds) of waiting correct input in `ss:read'")
+  "time (in seconds) of waiting command answer")
 
 (defvar ss:connection-timeout 10
   "time (in seconds) of waiting server port response")
