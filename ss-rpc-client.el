@@ -22,7 +22,7 @@
   "time (in seconds) of waiting command answer")
 
 (defvar ss:connection-timeout 10
-  "time (in seconds) of waiting server port response")
+  "time (in seconds) of waiting server response on starting")
 
 
 (defun ss:send-list! (proc lst)
@@ -138,10 +138,13 @@
         (when (> (buffer-size subproc-buffer) 0)
           (with-current-buffer subproc-buffer
             (ss--log-debug "received output from subproc: %S\ntry connect now" (buffer-string))
-            (setf (ss:rpc-server-connection server)
-                  (ss:connect (ss:rpc-server-name server) (buffer-string)))
-            (cancel-timer (process-get subproc 'timer))
-            (ss--log-info "{%s} connection complete" (ss:rpc-server-name server)))))))))
+            (cl-letf (((point) 1))
+              (let ((port (read subproc-buffer)))
+                (ss--log-debug "port: %s" port)
+                (setf (ss:rpc-server-connection server)
+                      (ss:connect (ss:rpc-server-name server) port))
+                (cancel-timer (process-get subproc 'timer))
+                (ss--log-info "{%s} connection complete" (ss:rpc-server-name server)))))))))))
     
 
 
@@ -158,12 +161,11 @@
 
 
 (defun ss:start-server (name command)
-  "start server process named NAME running the shell command COMMAND"
+  "start server named NAME running the shell command COMMAND"
   (ss--log-info "{%s} initializing server..." name)
   (condition-case err
-      (let* ((b (generate-new-buffer (format " *ss:%s subproc*" name)))
-             (proc (start-process-shell-command (format "%s-subproc" name)
-                                                b
+      (let* ((proc (start-process-shell-command (format "%s-subproc" name)
+                                                (generate-new-buffer (format " *ss:%s subproc*" name))
                                                 command))
              (server (make-ss:rpc-server :name name :subproc proc)))
         (ss--log-info "{%s} connecting to server...")
@@ -192,7 +194,7 @@
 
 (defun ss:call (server name &rest args)
   "call remote procedure
-PROC is the server process
+SERVER is the server struct returned by `ss:start-server'
 NAME is the remote procedure symbol
 ARGS are the arguments for passing to that procedure
 return result of procedure"
@@ -208,7 +210,7 @@ return result of procedure"
 
 (defun ss:call! (server name &rest args)
   "call remote procedure for side effects
-PROC is the server process
+SERVER is the server struct returned by `ss:start-server'
 NAME is the remote procedure symbol
 ARGS are the arguments for passing to that procedure
 return nil"
@@ -223,7 +225,7 @@ return nil"
 
 
 (defun ss:terminate! (server)
-  "terminate ss-rpc server process PROC with executing deinitialization hooks, if any"
+  "terminate ss-rpc server process SERVER (returned by `ss:start-server') with executing deinitialization hooks, if any"
   (let ((conn (ss:rpc-server-connection server)))
     (when (eq (process-status conn) 'open)
       (condition-case err
