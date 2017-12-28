@@ -52,19 +52,35 @@
 (defun ss:handle-r-re-c-cv (proc x)
   (cond
    ((eq (car x) 'return) (cadr x))
-   (t (ss:handle-re-c-cv proc x #'ss:handle-r-re-c-cv "return-void"))))
+   (t (case (car x)
+        (return-error (ss:handle-error! proc (cl-second x)))
+        (call (ss:handle-call! proc (cl-second x) (cl-third x))
+              (ss:handle-r-re-c-cv proc (ss:read proc)))
+        (call-void (ss:handle-call-void! proc (cl-second x) (cl-third x))
+                   (ss:handle-r-re-c-cv proc (ss:read proc)))
+        (otherwise (error "expected return | return-error | call | call-void message, received %s" x))))))
 
 
 (defun ss:handle-rv-re-c-cv (proc x)
   (case (car x)
     (return-void nil)    
-    (otherwise (ss:handle-re-c-cv proc x #'ss:handle-rv-re-c-cv "return-void"))))
+    (return-error (ss:handle-error! proc (cl-second x)))
+    (call (ss:handle-call! proc (cl-second x) (cl-third x))
+          (ss:handle-rv-re-c-cv proc (ss:read proc)))
+    (call-void (ss:handle-call-void! proc (cl-second x) (cl-third x))
+               (ss:handle-rv-re-c-cv proc (ss:read proc)))
+    (otherwise (error "expected return-void | return-error | call | call-void message, received %s" x))))
 
 
 (defun ss:handle-e-re-c-cv! (proc x)
   (case (car x)
     (exit nil)    
-    (otherwise (ss:handle-re-c-cv proc x #'ss:handle-e-re-c-cv!))))
+    (return-error (ss:handle-error! proc (cl-second x)))
+    (call (ss:handle-call! proc (cl-second x) (cl-third x))
+          (ss:handle-e-re-c-cv! proc (ss:read proc)))
+    (call-void (ss:handle-call-void! proc (cl-second x) (cl-third x))
+               (ss:handle-e-re-c-cv! proc (ss:read proc)))
+    (otherwise (error "expected exit | return-error | call | call-void message, received %s" x))))
 
 
 (defun ss:handle-re-c-cv (proc x handler error-prefix)
@@ -203,9 +219,9 @@ return result of procedure"
         (progn
           (ss:send-list! conn (list 'call name args))
           (ss:handle-r-re-c-cv conn (ss:read conn)))
-    (error (ss:send-client-error! conn err)
-           (ss:push-failed-call conn err name args))
-    (ss-exit (ss:push-failed-call conn err name args)))))
+      (error (ss:send-client-error! conn err)
+             (ss:push-failed-call conn err name args))
+      (ss-exit (ss:push-failed-call conn err name args)))))
 
 
 (defun ss:call! (server name &rest args)
