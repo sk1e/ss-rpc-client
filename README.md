@@ -6,8 +6,7 @@ you to extend Emacs functions in non-elisp (currently just
 features better perfomance compared to similiar programs and mutual
 remote calls between server and client. 
 
-SS-RPC depends on [log4e](https://github.com/aki2o/log4e).
+SS-RPC depends on [log4e](https://github.com/aki2o/log4e) and [tco](https://github.com/Wilfred/tco.el).
 
 For details, please consult source code with docstrings.
-
 

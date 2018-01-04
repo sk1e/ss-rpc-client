@@ -2,7 +2,7 @@
 
 (require 'cl-lib)
 (require 'log4e)
-
+(require 'tco)
 
 (put 'ss-exit
      'error-conditions
@@ -18,10 +18,10 @@
 (ss--log-set-level 'info)
 
 
-(defvar ss:read-timeout 6
+(defvar ss:read-timeout 12
   "time (in seconds) of waiting command answer")
 
-(defvar ss:connection-timeout 10
+(defvar ss:connection-timeout 15
   "time (in seconds) of waiting server response on starting")
 
 
@@ -36,7 +36,7 @@
 
   (with-current-buffer (process-buffer proc)
     (goto-char 1)
-    (ss--log-debug "{%s} received %s" (process-name proc) (buffer-string))
+    (ss--log-debug "{%s} received \"%s\"" (process-name proc) (buffer-string))
     
     (prog1
         (read (current-buffer))
@@ -49,7 +49,7 @@
   (signal 'ss-exit (list error-message)))
 
 
-(defun ss:handle-r-re-c-cv (proc x)
+(defun-tco ss:handle-r-re-c-cv (proc x)
   (cond
    ((eq (car x) 'return) (cadr x))
    (t (case (car x)
@@ -61,7 +61,7 @@
         (otherwise (error "expected return | return-error | call | call-void message, received %s" x))))))
 
 
-(defun ss:handle-rv-re-c-cv (proc x)
+(defun-tco ss:handle-rv-re-c-cv (proc x)
   (case (car x)
     (return-void nil)    
     (return-error (ss:handle-error! proc (cl-second x)))
@@ -72,7 +72,7 @@
     (otherwise (error "expected return-void | return-error | call | call-void message, received %s" x))))
 
 
-(defun ss:handle-e-re-c-cv! (proc x)
+(defun-tco ss:handle-e-re-c-cv! (proc x)
   (case (car x)
     (exit nil)    
     (return-error (ss:handle-error! proc (cl-second x)))
@@ -81,19 +81,6 @@
     (call-void (ss:handle-call-void! proc (cl-second x) (cl-third x))
                (ss:handle-e-re-c-cv! proc (ss:read proc)))
     (otherwise (error "expected exit | return-error | call | call-void message, received %s" x))))
-
-
-(defun ss:handle-re-c-cv (proc x handler error-prefix)
-  (case (car x)
-    (return-error (ss:handle-error! proc (cl-second x)))    
-    (call (ss:handle-call! proc (cl-second x) (cl-third x))
-          (funcall handler proc (ss:read proc)))    
-    (call-void (ss:handle-call-void! proc (cl-second x) (cl-third x))
-               (funcall handler proc (ss:read proc)))
-    (otherwise (error "expected %s | return-error | call | call-void message, received %s" error-prefix x))))
-
-
-
 
 (defun ss:send-application-error! (proc method err)
   (let ((error-text (format "{%s} client procedure application error:\nprocedure: %s\nerror: %s"
