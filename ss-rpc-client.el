@@ -37,7 +37,7 @@
   (with-current-buffer (process-buffer proc)
     (goto-char 1)
     (ss--log-debug "{%s} received \"%s\"" (process-name proc) (buffer-string))
-    
+
     (prog1
         (read (current-buffer))
       (erase-buffer))))
@@ -63,7 +63,7 @@
 
 (defun-tco ss:handle-rv-re-c-cv (proc x)
   (case (car x)
-    (return-void nil)    
+    (return-void nil)
     (return-error (ss:handle-error! proc (cl-second x)))
     (call (ss:handle-call! proc (cl-second x) (cl-third x))
           (ss:handle-rv-re-c-cv proc (ss:read proc)))
@@ -74,7 +74,7 @@
 
 (defun-tco ss:handle-e-re-c-cv! (proc x)
   (case (car x)
-    (exit nil)    
+    (exit nil)
     (return-error (ss:handle-error! proc (cl-second x)))
     (call (ss:handle-call! proc (cl-second x) (cl-third x))
           (ss:handle-e-re-c-cv! proc (ss:read proc)))
@@ -90,7 +90,7 @@
     (ss--log-error error-text)
     (ss:send-list! proc (list 'return-error error-text))
     (signal 'ss-exit (list error-text))))
-    
+
 
 
 
@@ -148,7 +148,7 @@
                       (ss:connect (ss:rpc-server-name server) port))
                 (cancel-timer (process-get subproc 'timer))
                 (ss--log-info "{%s} connection complete" (ss:rpc-server-name server)))))))))))
-    
+
 
 
 
@@ -175,7 +175,7 @@
         (process-put proc 'timer (run-at-time nil 0.1 #'ss:try-connect! server (float-time)))
         (push server ss:server-list)
         server)
-          
+
     (error (ss--log-fatal "%s %s" name (error-message-string err))
            (signal (car err) (cdr err)))))
 
@@ -240,4 +240,3 @@ return nil"
 
 
 (provide 'ss-rpc-client)
-
